@@ -378,6 +378,19 @@ body {
     }
 }
 
+/* Map modals */
+.modal-map {
+    width: 100%;
+    height: 400px !important;
+    border-radius: 8px !important;
+}
+
+.coord-display {
+    font-size: 0.85rem !important;
+    color: #6c757d !important;
+    margin-top: 6px !important;
+}
+
 /* Tooltips for collapsed sidebar */
 .sidebar-collapsed .sidebar-item > a {
     position: relative;

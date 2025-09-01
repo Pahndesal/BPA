@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link href="index-styles.css" rel="stylesheet">
 </head>
 <body>
@@ -55,6 +56,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
         // Toggle sidebar collapse
         document.querySelector('.sidebar-toggle').addEventListener('click', function() {
@@ -162,10 +164,22 @@
                                                 <div class="col-md-6">
                                                     <label class="form-label">Pickup Location</label>
                                                     <input type="text" class="form-control" name="pickupLocation" required>
+                                                    <div class="d-grid mt-2">
+                                                        <button type="button" id="pinPickupBtn" class="btn btn-outline-secondary btn-sm">Pin Pickup on Map</button>
+                                                    </div>
+                                                    <input type="hidden" name="pickupLat" id="pickupLat">
+                                                    <input type="hidden" name="pickupLng" id="pickupLng">
+                                                    <div class="coord-display" id="pickupCoordsDisplay">No pin set</div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <label class="form-label">Dropoff Location</label>
                                                     <input type="text" class="form-control" name="dropoffLocation" required>
+                                                    <div class="d-grid mt-2">
+                                                        <button type="button" id="pinDropoffBtn" class="btn btn-outline-secondary btn-sm">Pin Dropoff on Map</button>
+                                                    </div>
+                                                    <input type="hidden" name="dropoffLat" id="dropoffLat">
+                                                    <input type="hidden" name="dropoffLng" id="dropoffLng">
+                                                    <div class="coord-display" id="dropoffCoordsDisplay">No pin set</div>
                                                 </div>
                                             </div>
                                             <div class="d-flex gap-2 mt-3">
@@ -228,6 +242,36 @@
                             <!-- DB: On form submit, insert into reservations(requester_name, department, vehicle_type, purpose, passengers, cargo_weight, pickup_location, dropoff_location, pickup_datetime, return_datetime, status) -->
                             <!-- API: For availability, query GET /api/vehicles/availability?from=YYYY-MM-DD&to=YYYY-MM-DD and disable unavailable dates. -->
                             <!-- Realtime: Subscribe to WS /tracking/{reservationId} to update status and map marker. -->
+                            
+                            <!-- Pickup Pin Modal -->
+                            <div class="modal fade" id="pickupMapModal" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Pin Pickup Location</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="pickupMap" class="modal-map"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Dropoff Pin Modal -->
+                            <div class="modal fade" id="dropoffMapModal" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Pin Dropoff Location</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="dropoffMap" class="modal-map"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     `;
                     initializeVehicleReservationUI();
@@ -250,6 +294,102 @@
             const pickupDateInput = document.querySelector('input[name="pickupDate"]');
             const returnDateInput = document.querySelector('input[name="returnDate"]');
             const simulateTrackingButton = document.getElementById('vrSimulateTracking');
+            
+            // Map pinning elements
+            const pinPickupBtn = document.getElementById('pinPickupBtn');
+            const pinDropoffBtn = document.getElementById('pinDropoffBtn');
+            const pickupLatInput = document.getElementById('pickupLat');
+            const pickupLngInput = document.getElementById('pickupLng');
+            const dropoffLatInput = document.getElementById('dropoffLat');
+            const dropoffLngInput = document.getElementById('dropoffLng');
+            const pickupCoordsDisplay = document.getElementById('pickupCoordsDisplay');
+            const dropoffCoordsDisplay = document.getElementById('dropoffCoordsDisplay');
+            
+            const pickupModalEl = document.getElementById('pickupMapModal');
+            const dropoffModalEl = document.getElementById('dropoffMapModal');
+            const pickupModal = new bootstrap.Modal(pickupModalEl);
+            const dropoffModal = new bootstrap.Modal(dropoffModalEl);
+            
+            let pickupMap = null;
+            let pickupMarker = null;
+            let dropoffMap = null;
+            let dropoffMarker = null;
+            
+            const defaultCenter = [0, 0];
+            const defaultZoom = 2;
+            
+            pinPickupBtn.addEventListener('click', function() { pickupModal.show(); });
+            pinDropoffBtn.addEventListener('click', function() { dropoffModal.show(); });
+            
+            pickupModalEl.addEventListener('shown.bs.modal', function() {
+                if (!pickupMap) {
+                    pickupMap = L.map('pickupMap').setView(defaultCenter, defaultZoom);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap contributors'
+                    }).addTo(pickupMap);
+                    pickupMap.on('click', function(e) {
+                        const { lat, lng } = e.latlng;
+                        if (!pickupMarker) {
+                            pickupMarker = L.marker([lat, lng], { draggable: true }).addTo(pickupMap);
+                            pickupMarker.on('dragend', function(evt) {
+                                const pos = evt.target.getLatLng();
+                                setPickupCoords(pos.lat, pos.lng);
+                            });
+                        } else {
+                            pickupMarker.setLatLng([lat, lng]);
+                        }
+                        setPickupCoords(lat, lng);
+                        pickupModal.hide();
+                    });
+                    // Try geolocation for convenience
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(function(pos) {
+                            pickupMap.setView([pos.coords.latitude, pos.coords.longitude], 12);
+                        });
+                    }
+                }
+                setTimeout(function() { pickupMap.invalidateSize(); }, 50);
+            });
+            
+            dropoffModalEl.addEventListener('shown.bs.modal', function() {
+                if (!dropoffMap) {
+                    dropoffMap = L.map('dropoffMap').setView(defaultCenter, defaultZoom);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap contributors'
+                    }).addTo(dropoffMap);
+                    dropoffMap.on('click', function(e) {
+                        const { lat, lng } = e.latlng;
+                        if (!dropoffMarker) {
+                            dropoffMarker = L.marker([lat, lng], { draggable: true }).addTo(dropoffMap);
+                            dropoffMarker.on('dragend', function(evt) {
+                                const pos = evt.target.getLatLng();
+                                setDropoffCoords(pos.lat, pos.lng);
+                            });
+                        } else {
+                            dropoffMarker.setLatLng([lat, lng]);
+                        }
+                        setDropoffCoords(lat, lng);
+                        dropoffModal.hide();
+                    });
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(function(pos) {
+                            dropoffMap.setView([pos.coords.latitude, pos.coords.longitude], 12);
+                        });
+                    }
+                }
+                setTimeout(function() { dropoffMap.invalidateSize(); }, 50);
+            });
+            
+            function setPickupCoords(lat, lng) {
+                if (pickupLatInput) pickupLatInput.value = lat.toFixed(6);
+                if (pickupLngInput) pickupLngInput.value = lng.toFixed(6);
+                if (pickupCoordsDisplay) pickupCoordsDisplay.textContent = `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+            }
+            function setDropoffCoords(lat, lng) {
+                if (dropoffLatInput) dropoffLatInput.value = lat.toFixed(6);
+                if (dropoffLngInput) dropoffLngInput.value = lng.toFixed(6);
+                if (dropoffCoordsDisplay) dropoffCoordsDisplay.textContent = `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+            }
 
             // Initialize calendar
             const calendarState = { monthOffset: 0, selectedDates: new Set() };
