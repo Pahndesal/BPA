@@ -246,6 +246,34 @@ body {
     margin-left: 60px;
 }
 
+/* Content box shown when submenu is clicked */
+.content-box {
+    background: #ffffff !important;
+    border: 2px solid #e9ecef !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06) !important;
+}
+
+.content-title {
+    font-size: 1.1rem !important;
+    margin-bottom: 12px !important;
+    color: #212529 !important;
+}
+
+.content-body {
+    min-height: 220px !important;
+    background-color: #f8f9fa !important;
+    border-radius: 10px !important;
+}
+
+/* Active submenu link */
+.submenu li a.active {
+    background: linear-gradient(135deg, #495057 0%, #343a40 100%) !important;
+    color: #ffffff !important;
+    border-left-color: #212529 !important;
+}
+
 /* Tooltips for collapsed sidebar */
 .sidebar-collapsed .sidebar-item > a {
     position: relative;

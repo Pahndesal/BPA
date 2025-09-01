@@ -99,6 +99,32 @@
                 });
             });
         }
+        
+        // Intercept submenu link clicks and render blank content box
+        const submenuLinks = document.querySelectorAll('.submenu li a');
+        const mainContentContainer = document.querySelector('.main-content .container-fluid');
+        
+        submenuLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Mark active submenu link
+                submenuLinks.forEach(other => other.classList.remove('active'));
+                this.classList.add('active');
+                
+                const titleText = this.querySelector('.menu-text') ? this.querySelector('.menu-text').textContent.trim() : this.textContent.trim();
+                
+                // Render blank rounded box with title placeholder
+                if (mainContentContainer) {
+                    mainContentContainer.innerHTML = `
+                        <div class="content-box">
+                            <div class="content-title">${titleText}</div>
+                            <div class="content-body"></div>
+                        </div>
+                    `;
+                }
+            });
+        });
     </script>
 </body>
 </html>
