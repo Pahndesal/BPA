@@ -157,10 +157,6 @@
                                                     <label class="form-label">Cargo Weight (kg)</label>
                                                     <input type="number" class="form-control" name="cargoWeight" min="0" value="0">
                                                 </div>
-                                                <div class="col-12">
-                                                    <label class="form-label">Purpose</label>
-                                                    <textarea class="form-control" rows="2" name="purpose"></textarea>
-                                                </div>
                                                 <div class="col-md-6">
                                                     <label class="form-label">Pickup Location</label>
                                                     <input type="text" class="form-control" name="pickupLocation" required>
@@ -239,7 +235,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <!-- DB: On form submit, insert into reservations(requester_name, department, vehicle_type, purpose, passengers, cargo_weight, pickup_location, dropoff_location, pickup_datetime, return_datetime, status) -->
+                            <!-- DB: On form submit, insert into reservations(requester_name, department, vehicle_type, passengers, cargo_weight, pickup_location, dropoff_location, pickup_datetime, return_datetime, status) -->
                             <!-- API: For availability, query GET /api/vehicles/availability?from=YYYY-MM-DD&to=YYYY-MM-DD and disable unavailable dates. -->
                             <!-- Realtime: Subscribe to WS /tracking/{reservationId} to update status and map marker. -->
                             
