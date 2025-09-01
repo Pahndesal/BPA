@@ -17,6 +17,11 @@
         </div>
         <h1 style="font-family: 'Great Vibes', cursive !important; font-size: 1.5rem; font-weight: 350; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
             RAEVOR</h1>
+        <div class="header-actions">
+            <button id="themeToggleBtn" class="theme-toggle-btn" type="button" aria-label="Toggle dark mode">
+                <i class="bi bi-moon"></i>
+            </button>
+        </div>
     </header>
     
 
